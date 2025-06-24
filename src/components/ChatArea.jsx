@@ -1,10 +1,21 @@
+import { useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
 
-export default function ChatArea() {
+export default function ChatArea({ messages }) {
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
   return (
-    <div className="flex flex-col space-y-4">
-      <ChatMessage text="Hello! How can I help you?" isUser={false} />
-      <ChatMessage text="Hi! I need a summary of this text..." isUser={true} />
+    <div className="flex flex-col space-y-4 h-full overflow-y-auto">
+      {messages.map((msg, idx) => (
+        <ChatMessage key={idx} text={msg.text} isUser={msg.isUser} />
+      ))}
+      <div ref={bottomRef} />
     </div>
   );
 }
