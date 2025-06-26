@@ -1,4 +1,10 @@
 export default function Sidebar({ chats, activeChatId, onNewChat, onSelectChat, onDeleteChat, onClearAll }) {
+  const TOOL_LABELS = {
+    chatbot: 'Chatbot',
+    summarizer: 'Summarizer',
+    email: 'Email Gen',
+    translator: 'Translator',
+  };
   return (
     <aside className="w-64 bg-white border-r p-4 flex flex-col">
       <div className="flex items-center justify-between mb-4">
@@ -21,7 +27,7 @@ export default function Sidebar({ chats, activeChatId, onNewChat, onSelectChat, 
             className={`flex items-center justify-between p-2 rounded cursor-pointer ${chat.id === activeChatId ? 'bg-blue-100 font-semibold' : 'hover:bg-gray-100'}`}
           >
             <span onClick={() => onSelectChat(chat.id)} className="flex-1 truncate">
-              {chat.title}
+              <span className="font-bold text-blue-700 mr-1">[{TOOL_LABELS[chat.tool] || 'Chat'}]</span> {chat.title}
             </span>
             <button
               className="ml-2 text-gray-400 hover:text-red-500"

@@ -137,8 +137,13 @@ export default function ChatPage() {
     setCurrentTool(tool);
     setShowLanguageSelect(false);
     setPendingTranslation(null);
-    // Optionally, start a new chat for each tool switch
-    // handleNewChat();
+    // Start a new chat for each tool switch
+    const newId = Date.now();
+    setChats((prev) => [
+      { id: newId, tool, title: 'New Chat', messages: [], timestamp: Date.now() },
+      ...prev,
+    ]);
+    setActiveChatId(newId);
   }
 
   // Handle language selection for translation
@@ -190,7 +195,7 @@ export default function ChatPage() {
         </div>
         {/* Chat Area */}
         <div className="flex-1 flex flex-col justify-end px-8 pt-8 pb-28 space-y-4 overflow-y-auto">
-          <ChatArea messages={activeChat?.messages || []} />
+          <ChatArea messages={activeChat?.messages || []} toolLabel={TOOL_OPTIONS.find(opt => opt.key === currentTool)?.label} />
         </div>
         {/* Input Box or Language Select */}
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-2/3">
