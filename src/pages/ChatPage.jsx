@@ -44,6 +44,8 @@ export default function ChatPage() {
   const [activeChatId, setActiveChatId] = useState(1);
   const [pendingTranslation, setPendingTranslation] = useState(null); // { text: string }
   const [showLanguageSelect, setShowLanguageSelect] = useState(false);
+  // MCP: context state for conversation history
+  const [context, setContext] = useState({ history: [] });
 
   const activeChat = chats.find((c) => c.id === activeChatId);
 
@@ -74,6 +76,9 @@ export default function ChatPage() {
     else if (currentTool === 'email') payload = { description: input };
     else payload = { prompt: input };
 
+    // Always include context in the payload (MCP)
+    payload.context = context;
+
     try {
       const res = await fetch(`http://localhost:8000${endpoint}`, {
         method: 'POST',
@@ -87,20 +92,52 @@ export default function ChatPage() {
         const newUserMsg = { text: input, isUser: true };
         const newAiMsg = { text: aiText, isUser: false };
         updateActiveChatMessages([...activeChat.messages, newUserMsg, newAiMsg]);
+        // Update MCP context
+        setContext(prev => ({
+          ...prev,
+          history: [
+            ...prev.history,
+            { tool: currentTool, message: input, response: aiText }
+          ]
+        }));
       } else {
         // For other tools, add user message first, then AI response
         const newUserMsg = { text: input, isUser: true };
         const newAiMsg = { text: aiText, isUser: false };
         updateActiveChatMessages([...activeChat.messages, newUserMsg, newAiMsg]);
+        // Update MCP context
+        setContext(prev => ({
+          ...prev,
+          history: [
+            ...prev.history,
+            { tool: currentTool, message: input, response: aiText }
+          ]
+        }));
       }
     } catch (err) {
       const errorMsg = { text: 'Error: Could not get response from server.', isUser: false };
       if (currentTool === 'translator') {
         const newUserMsg = { text: input, isUser: true };
         updateActiveChatMessages([...activeChat.messages, newUserMsg, errorMsg]);
+        // Update MCP context with error
+        setContext(prev => ({
+          ...prev,
+          history: [
+            ...prev.history,
+            { tool: currentTool, message: input, response: errorMsg.text }
+          ]
+        }));
       } else {
         const newUserMsg = { text: input, isUser: true };
         updateActiveChatMessages([...activeChat.messages, newUserMsg, errorMsg]);
+        // Update MCP context with error
+        setContext(prev => ({
+          ...prev,
+          history: [
+            ...prev.history,
+            { tool: currentTool, message: input, response: errorMsg.text }
+          ]
+        }));
       }
     }
     setShowLanguageSelect(false);
