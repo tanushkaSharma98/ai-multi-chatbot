@@ -6,6 +6,7 @@ from services.translator import translate_text
 from services.email_writer import write_email
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional, Dict, Any
 
 app = FastAPI()
 
@@ -19,6 +20,7 @@ app.add_middleware(
 
 class ChatbotRequest(BaseModel):
     prompt: str
+    context: Optional[Dict[str, Any]] = None
 
 class SummarizerRequest(BaseModel):
     text: str
@@ -33,7 +35,13 @@ class EmailWriterRequest(BaseModel):
 @app.post("/chatbot")
 async def chatbot_endpoint(request: ChatbotRequest):
     try:
-        response = await get_chatbot_response(request.prompt)
+        # Build conversation history from context (MCP)
+        conversation = ""
+        if request.context and 'history' in request.context:
+            for turn in request.context['history']:
+                conversation += f"User: {turn.get('message', '')}\nAI: {turn.get('response', '')}\n"
+        conversation += f"User: {request.prompt}\nAI:"
+        response = await get_chatbot_response(conversation)
         return {"response": response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
