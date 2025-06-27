@@ -62,7 +62,7 @@ export default function ChatPage() {
         language = match[1];
       }
       if (!language) {
-        // Ask user for language
+        // Ask user for language, but do NOT add user message yet
         setPendingTranslation({ text: input });
         setShowLanguageSelect(true);
         // Don't send to backend yet
@@ -74,10 +74,6 @@ export default function ChatPage() {
     else if (currentTool === 'email') payload = { description: input };
     else payload = { prompt: input };
 
-    // Add user message
-    const newUserMsg = { text: input, isUser: true };
-    updateActiveChatMessages([...activeChat.messages, newUserMsg]);
-
     try {
       const res = await fetch(`http://localhost:8000${endpoint}`, {
         method: 'POST',
@@ -86,11 +82,26 @@ export default function ChatPage() {
       });
       const data = await res.json();
       let aiText = data.response || data.summary || data.email || data.translation || 'No response.';
-      const newAiMsg = { text: aiText, isUser: false };
-      updateActiveChatMessages([...activeChat.messages, newUserMsg, newAiMsg]);
+      // For translator, add user message and translation together after language is selected
+      if (currentTool === 'translator') {
+        const newUserMsg = { text: input, isUser: true };
+        const newAiMsg = { text: aiText, isUser: false };
+        updateActiveChatMessages([...activeChat.messages, newUserMsg, newAiMsg]);
+      } else {
+        // For other tools, add user message first, then AI response
+        const newUserMsg = { text: input, isUser: true };
+        const newAiMsg = { text: aiText, isUser: false };
+        updateActiveChatMessages([...activeChat.messages, newUserMsg, newAiMsg]);
+      }
     } catch (err) {
       const errorMsg = { text: 'Error: Could not get response from server.', isUser: false };
-      updateActiveChatMessages([...activeChat.messages, newUserMsg, errorMsg]);
+      if (currentTool === 'translator') {
+        const newUserMsg = { text: input, isUser: true };
+        updateActiveChatMessages([...activeChat.messages, newUserMsg, errorMsg]);
+      } else {
+        const newUserMsg = { text: input, isUser: true };
+        updateActiveChatMessages([...activeChat.messages, newUserMsg, errorMsg]);
+      }
     }
     setShowLanguageSelect(false);
     setPendingTranslation(null);
