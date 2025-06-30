@@ -7,12 +7,15 @@ from services.email_writer import write_email
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, Dict, Any
+import os
+
+print("GEMINI_API_KEY:", os.getenv("GEMINI_API_KEY"))
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -24,10 +27,12 @@ class ChatbotRequest(BaseModel):
 
 class SummarizerRequest(BaseModel):
     text: str
+    context: Optional[Dict[str, Any]] = None
 
 class TranslatorRequest(BaseModel):
     text: str
     target_language: str
+    context: Optional[Dict[str, Any]] = None
 
 class EmailWriterRequest(BaseModel):
     description: str
@@ -49,7 +54,15 @@ async def chatbot_endpoint(request: ChatbotRequest):
 @app.post("/summarize")
 async def summarizer_endpoint(request: SummarizerRequest):
     try:
-        summary = await summarize_text(request.text)
+        # If context is provided and has history, summarize the conversation
+        if request.context and 'history' in request.context and not request.text.strip():
+            # Join all user and AI messages for summarization
+            conversation = ""
+            for turn in request.context['history']:
+                conversation += f"User: {turn.get('message', '')}\nAI: {turn.get('response', '')}\n"
+            summary = await summarize_text(conversation)
+        else:
+            summary = await summarize_text(request.text)
         return {"summary": summary}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -57,7 +70,16 @@ async def summarizer_endpoint(request: SummarizerRequest):
 @app.post("/translate")
 async def translator_endpoint(request: TranslatorRequest):
     try:
-        translation = await translate_text(request.text, request.target_language)
+        # If context is provided and has translations, allow translating previous messages
+        if request.context and 'translations' in request.context and not request.text.strip():
+            # Example: translate the last translation again (could be customized)
+            last_translation = request.context['translations'][-1] if request.context['translations'] else None
+            if last_translation:
+                translation = await translate_text(last_translation['original'], request.target_language)
+            else:
+                translation = await translate_text(request.text, request.target_language)
+        else:
+            translation = await translate_text(request.text, request.target_language)
         return {"translation": translation}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
