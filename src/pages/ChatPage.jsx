@@ -44,8 +44,13 @@ export default function ChatPage() {
   const [activeChatId, setActiveChatId] = useState(1);
   const [pendingTranslation, setPendingTranslation] = useState(null); // { text: string }
   const [showLanguageSelect, setShowLanguageSelect] = useState(false);
-  // MCP: context state for conversation history
-  const [context, setContext] = useState({ history: [] });
+  // Expanded MCP: context state for conversation history, summaries, translations, preferences
+  const [context, setContext] = useState({
+    history: [],
+    summaries: [],
+    translations: [],
+    preferences: { language: 'en', tone: 'friendly' }
+  });
 
   const activeChat = chats.find((c) => c.id === activeChatId);
 
@@ -92,9 +97,30 @@ export default function ChatPage() {
         const newUserMsg = { text: input, isUser: true };
         const newAiMsg = { text: aiText, isUser: false };
         updateActiveChatMessages([...activeChat.messages, newUserMsg, newAiMsg]);
-        // Update MCP context
+        // Update MCP context: add to translations and history
         setContext(prev => ({
           ...prev,
+          translations: [
+            ...prev.translations,
+            { original: input, language: selectedLanguage, translation: aiText }
+          ],
+          history: [
+            ...prev.history,
+            { tool: currentTool, message: input, response: aiText }
+          ]
+        }));
+      } else if (currentTool === 'summarizer') {
+        // For summarizer, add user message and summary
+        const newUserMsg = { text: input, isUser: true };
+        const newAiMsg = { text: aiText, isUser: false };
+        updateActiveChatMessages([...activeChat.messages, newUserMsg, newAiMsg]);
+        // Update MCP context: add to summaries and history
+        setContext(prev => ({
+          ...prev,
+          summaries: [
+            ...prev.summaries,
+            { text: input, summary: aiText }
+          ],
           history: [
             ...prev.history,
             { tool: currentTool, message: input, response: aiText }
@@ -127,10 +153,19 @@ export default function ChatPage() {
             { tool: currentTool, message: input, response: errorMsg.text }
           ]
         }));
+      } else if (currentTool === 'summarizer') {
+        const newUserMsg = { text: input, isUser: true };
+        updateActiveChatMessages([...activeChat.messages, newUserMsg, errorMsg]);
+        setContext(prev => ({
+          ...prev,
+          history: [
+            ...prev.history,
+            { tool: currentTool, message: input, response: errorMsg.text }
+          ]
+        }));
       } else {
         const newUserMsg = { text: input, isUser: true };
         updateActiveChatMessages([...activeChat.messages, newUserMsg, errorMsg]);
-        // Update MCP context with error
         setContext(prev => ({
           ...prev,
           history: [
